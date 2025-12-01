@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<VBox prefHeight="650.0" prefWidth="450.0" spacing="15.0"
+      style="-fx-background-color: #f0f0f0; -fx-border-color: #555c70; -fx-border-width: 2;"
+      xmlns="http://javafx.com/javafx/17.0.12"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="controller.PaymentController">
+
+    <padding>
+        <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
+    </padding>
+
+    <children>
+        <!-- Title -->
+        <Label text="  Process Payment" maxWidth="Infinity"
+               style="-fx-background-color: #555c70; -fx-text-fill: white;"
+               VBox.vgrow="NEVER">
+            <font>
+                <Font name="System Bold" size="24.0"/>
+            </font>
+            <padding>
+                <Insets top="10.0" bottom="10.0"/>
+            </padding>
+        </Label>
+
+        <!-- Summary Grid -->
+        <GridPane fx:id="summaryGrid" hgap="10.0" vgap="8.0"
+                  style="-fx-border-color: #ccc; -fx-border-width: 1; -fx-padding: 10; -fx-background-color: white;">
+            <columnConstraints>
+                <ColumnConstraints prefWidth="250.0"/>
+                <ColumnConstraints prefWidth="150.0"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints/><RowConstraints/><RowConstraints/><RowConstraints/><RowConstraints/>
+            </rowConstraints>
+            <VBox.margin>
+                <Insets top="10.0"/>
+            </VBox.margin>
+            <children>
+                <Label text="Subtotal (Before Discount):" style="-fx-font-weight: bold;"/>
+                <Label fx:id="subtotalLabel" text="₱0.00" style="-fx-font-weight: bold;" GridPane.columnIndex="1"/>
+
+                <HBox spacing="5.0" alignment="CENTER_LEFT" GridPane.rowIndex="1">
+                    <children>
+                        <Label text="Discount (%):"/>
+                        <TextField fx:id="discountInput" prefWidth="50.0" promptText="0"/>
+                    </children>
+                </HBox>
+                <Label fx:id="discountAmountLabel" text="₱0.00" style="-fx-text-fill: red;" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                <HBox spacing="5.0" alignment="CENTER_LEFT" GridPane.rowIndex="2">
+                    <children>
+                        <Label text="VAT (%):"/>
+                        <TextField fx:id="vatRateInput" prefWidth="50.0" promptText="12"/>
+                    </children>
+                </HBox>
+                <Label fx:id="vatAmountLabel" text="₱0.00" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                <HBox spacing="5.0" alignment="CENTER_LEFT" GridPane.rowIndex="3">
+                    <children>
+                        <Label text="Local Tax (%):"/>
+                        <TextField fx:id="taxRateInput" prefWidth="50.0" promptText="2"/>
+                    </children>
+                </HBox>
+                <Label fx:id="taxAmountLabel" text="₱0.00" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+
+                <Label text="GRAND TOTAL DUE:" GridPane.rowIndex="4">
+                    <font>
+                        <Font name="System Bold" size="18.0"/>
+                    </font>
+                </Label>
+                <Label fx:id="grandTotalLabel" text="₱0.00" GridPane.columnIndex="1" GridPane.rowIndex="4">
+                    <font>
+                        <Font name="System Bold" size="18.0"/>
+                    </font>
+                </Label>
+            </children>
+        </GridPane>
+
+        <!-- Payment Method -->
+        <VBox spacing="10.0">
+            <children>
+                <Label text="Payment Method:" style="-fx-font-weight: bold;"/>
+                <HBox spacing="20.0" alignment="CENTER_LEFT">
+                    <children>
+                        <RadioButton fx:id="radioCash" text="Cash" selected="true" onAction="#handlePaymentMethodChange">
+                            <toggleGroup>
+                                <ToggleGroup fx:id="paymentMethodGroup"/>
+                            </toggleGroup>
+                            <font>
+                                <Font size="14.0"/>
+                            </font>
+                        </RadioButton>
+                        <RadioButton fx:id="radioCard" text="Card/Digital" onAction="#handlePaymentMethodChange">
+                            <toggleGroup>
+                                <fx:reference source="paymentMethodGroup"/>
+                            </toggleGroup>
+                            <font>
+                                <Font size="14.0"/>
+                            </font>
+                        </RadioButton>
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+
+        <!-- Cash Payment Pane -->
+        <VBox fx:id="cashPaymentPane" spacing="10.0" prefHeight="110.0" prefWidth="406.0">
+            <children>
+                <TitledPane text="Cash Payment Details" collapsible="false" animated="false">
+                    <content>
+                        <AnchorPane prefHeight="84.0" prefWidth="404.0">
+                            <children>
+                                <GridPane layoutX="14.0" layoutY="14.0" hgap="10.0" vgap="10.0"
+                                          AnchorPane.topAnchor="10.0" AnchorPane.bottomAnchor="10.0"
+                                          AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0">
+                                    <columnConstraints>
+                                        <ColumnConstraints prefWidth="100.0"/>
+                                        <ColumnConstraints prefWidth="100.0"/>
+                                    </columnConstraints>
+                                    <rowConstraints>
+                                        <RowConstraints/><RowConstraints/>
+                                    </rowConstraints>
+                                    <children>
+                                        <Label text="Amount Paid (₱):"/>
+                                        <TextField fx:id="amountPaidField" promptText="Enter amount received"
+                                                   onKeyReleased="#calculateChange" GridPane.columnIndex="1"/>
+                                        <Label text="Change (₱):" GridPane.rowIndex="1"/>
+                                        <Label fx:id="changeLabel" text="₱0.00" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                            <font>
+                                                <Font name="System Bold" size="18.0"/>
+                                            </font>
+                                        </Label>
+                                    </children>
+                                </GridPane>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </TitledPane>
+            </children>
+        </VBox>
+
+        <!-- Card Payment Pane -->
+        <VBox fx:id="cardPaymentPane" spacing="10.0" prefHeight="100.0" visible="false" managed="false">
+            <children>
+                <TitledPane text="Card/Digital Payment Details" collapsible="false" animated="false">
+                    <content>
+                        <AnchorPane prefHeight="100.0" prefWidth="200.0">
+                            <children>
+                                <GridPane layoutX="10.0" layoutY="10.0" hgap="10.0" vgap="10.0"
+                                          AnchorPane.topAnchor="10.0" AnchorPane.bottomAnchor="10.0"
+                                          AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0">
+                                    <columnConstraints>
+                                        <ColumnConstraints prefWidth="100.0"/>
+                                        <ColumnConstraints prefWidth="200.0"/>
+                                    </columnConstraints>
+                                    <children>
+                                        <Label text="Card/Digital Type:"/>
+                                        <ComboBox fx:id="cardTypeCombo" promptText="Select Type"
+                                                  onAction="#handlePaymentMethodChange" GridPane.columnIndex="1"/>
+                                    </children>
+                                </GridPane>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </TitledPane>
+            </children>
+        </VBox>
+
+        <!-- Buttons -->
+        <HBox spacing="20.0" alignment="CENTER" prefHeight="50.0">
+            <children>
+                <Button fx:id="processPaymentButton" text="Process Payment"
+                        onAction="#handleProcessPayment"
+                        prefHeight="40.0" prefWidth="180.0"
+                        style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16;"/>
+                <Button fx:id="cancelButton" text="Cancel"
+                        onAction="#handleCancel"
+                        prefHeight="40.0" prefWidth="100.0"
+                        style="-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: bold;"/>
+            </children>
+        </HBox>
+    </children>
+</VBox>

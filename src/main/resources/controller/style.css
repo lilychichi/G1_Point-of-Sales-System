@@ -1,0 +1,6 @@
+#imageBox{
+    -fx-border-width: 1;
+    -fx-border-color: #0097e6;
+    -fx-padding: 0px;
+    -fx-background-color: #fff;
+}

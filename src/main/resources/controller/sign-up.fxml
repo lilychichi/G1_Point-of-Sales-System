@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<HBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.SignUpController">
+    <children>
+        <AnchorPane prefHeight="200.0" prefWidth="200.0">
+         <children>
+            <VBox alignment="CENTER" prefHeight="400.0" prefWidth="189.0" style="-fx-background-color: #e84118; -fx-border-color: #000;">
+               <children>
+                  <Pane prefHeight="149.0" prefWidth="161.0">
+                     <children>
+                        <Label layoutX="54.0" layoutY="26.0" text="QTEN POS">
+                           <font>
+                              <Font name="Franklin Gothic Medium" size="18.0" />
+                           </font>
+                        </Label>
+                        <Label layoutX="61.0" layoutY="48.0" text="SIGN UP">
+                           <font>
+                              <Font name="Franklin Gothic Medium" size="18.0" />
+                           </font>
+                        </Label>
+                     </children>
+                  </Pane>
+               </children></VBox>
+         </children></AnchorPane>
+        <AnchorPane prefHeight="400.0" prefWidth="425.0">
+            <children>
+            <VBox alignment="CENTER" prefHeight="400.0" prefWidth="411.0" spacing="5.0" style="-fx-background-color: #f5f6fa;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+               <children>
+                  <Pane layoutX="110.0" layoutY="284.0" prefHeight="12.0" prefWidth="211.0" />
+                      <Label text="Username:" VBox.vgrow="ALWAYS">
+                          <font>
+                              <Font name="Consolas" size="14.0" />
+                          </font>
+                  </Label>
+                      <TextField fx:id="tf_username" />
+                      <Label text="Full Name:">
+                          <font>
+                              <Font name="Consolas" size="14.0" />
+                          </font>
+                  </Label>
+                      <TextField fx:id="tf_fullName" />
+                      <Label text="Password:">
+                          <font>
+                              <Font name="Consolas" size="14.0" />
+                          </font>
+                  </Label>
+                      <PasswordField fx:id="pf_password" prefHeight="25.0" prefWidth="149.0" />
+                  <Pane prefHeight="4.0" prefWidth="211.0" />
+      
+                      <Button fx:id="button_signUp" mnemonicParsing="false" onAction="#handleSignUp" prefHeight="35.0" prefWidth="149.0" text="Sign Up" />
+                  <Pane layoutX="110.0" layoutY="235.0" prefHeight="12.0" prefWidth="211.0" />
+      
+                      <Label text="Already a member?">
+                          <font>
+                              <Font name="Consolas" size="14.0" />
+                          </font>
+                      </Label>
+      
+                      <Button fx:id="button_toLogin" mnemonicParsing="false" onAction="#switchToLoginScene" prefHeight="25.0" prefWidth="188.0" style="-fx-background-color: transparent; -fx-cursor: hand;" text="Click here to Login!" textFill="#2f00ff" underline="true">
+                          <font>
+                              <Font name="Consolas" size="14.0" />
+                          </font>
+                  </Button>
+               </children>
+               <padding>
+                  <Insets left="100.0" right="100.0" />
+               </padding>
+            </VBox>
+            </children>
+        </AnchorPane>
+    </children>
+</HBox>

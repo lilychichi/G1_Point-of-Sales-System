@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="CENTER" spacing="15.0" prefHeight="250.0" prefWidth="350.0" style="-fx-background-color: #f4f7f9; -fx-border-color: #333; -fx-border-width: 1;"
+      xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="controller.QuantityController">
+
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+
+    <!-- Header -->
+    <Label text="Enter Quantity" textFill="#000080">
+        <font>
+            <Font name="Consolas Bold" size="20.0" />
+        </font>
+    </Label>
+
+    <!-- Product Info Labels -->
+    <VBox alignment="CENTER" spacing="5.0">
+        <!-- fx:id: productLabel -->
+        <Label fx:id="productLabel" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #333;" text="Product: Loading..." />
+        <!-- fx:id: priceLabel -->
+        <Label fx:id="priceLabel" style="-fx-size: 12px; -fx-text-fill: #555;" text="Price: N/A" />
+    </VBox>
+
+    <!-- Quantity Input -->
+    <TextField fx:id="quantityField" promptText="Quantity (e.g., 1 or 5)" alignment="CENTER" style="-fx-max-width: 150;">
+        <font>
+            <Font name="Consolas" size="14.0" />
+        </font>
+    </TextField>
+
+    <!-- Action Buttons -->
+    <HBox alignment="CENTER" spacing="15.0">
+        <!-- ADD Button - Uses onAction="#handleAdd" -->
+        <Button mnemonicParsing="false" text="Add to Order" onAction="#handleAdd" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-padding: 8 15; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 5;">
+            <font>
+                <Font name="Consolas" size="14.0" />
+            </font>
+        </Button>
+        <!-- CANCEL Button - Uses onAction="#handleCancel") -->
+        <Button mnemonicParsing="false" text="Cancel" onAction="#handleCancel" style="-fx-background-color: #f44336; -fx-text-fill: white; -fx-padding: 8 15; -fx-font-size: 14px; -fx-cursor: hand; -fx-background-radius: 5;">
+            <font>
+                <Font name="Consolas" size="14.0" />
+            </font>
+        </Button>
+    </HBox>
+</VBox>
