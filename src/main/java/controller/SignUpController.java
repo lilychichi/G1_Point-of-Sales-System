@@ -6,6 +6,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
@@ -14,9 +15,9 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 
 public class SignUpController {
-
 
     @FXML
     private TextField tf_username;
@@ -27,9 +28,14 @@ public class SignUpController {
     @FXML
     private PasswordField pf_password;
 
-    /**
-     * Handles the "Sign Up" button click (onAction="#handleSignUp").
-     */
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
     @FXML
     public void handleSignUp(ActionEvent event) {
 
@@ -38,31 +44,39 @@ public class SignUpController {
         String password = pf_password.getText();
 
         if (username.isEmpty() || fullName.isEmpty() || password.isEmpty()) {
-            System.err.println("Error: Please fill in all required fields (Username, Full Name, Password).");
+            showAlert(Alert.AlertType.WARNING, "Input Required", "Please fill in all fields (Username, Full Name, Password).");
             return;
         }
 
-        boolean success = insertNewUser(username, fullName, password);
+        try {
+            insertNewUser(username, fullName, password);
 
-        if (success) {
+            showAlert(Alert.AlertType.INFORMATION, "Success", "Account created successfully! You can now log in.");
             System.out.println("User '" + username + "' signed up successfully. Switching to Login.");
+
+            // --- FIX APPLIED HERE: Wrap IOException ---
             try {
                 switchToLoginScene(event);
             } catch (IOException e) {
-                System.err.println("Error switching scenes after successful sign up.");
+                showAlert(Alert.AlertType.ERROR, "Navigation Error", "Failed to load login screen.");
+                System.err.println("Error switching scenes: " + e.getMessage());
                 e.printStackTrace();
             }
-        } else {
-            System.err.println("Sign Up Failed. Check database configuration or console logs for details.");
+            // ------------------------------------------
+
+        } catch (SQLException e) {
+
+            if (e instanceof SQLIntegrityConstraintViolationException && e.getErrorCode() == 1062) {
+                showAlert(Alert.AlertType.ERROR, "Sign Up Failed", "The username '" + username + "' is already taken. Please choose another.");
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Database Error", "Sign up failed due to a database error. Check console for details.");
+                System.err.println("Database Error during sign-up: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
-    /**
-     * Helper method to insert user data into the 'User' table.
-     * Inserts into: username, fullname, password, role.
-     * @return true if one row was affected (insertion successful).
-     */
-    private boolean insertNewUser(String username, String fullName, String password) {
+    private void insertNewUser(String username, String fullName, String password) throws SQLException {
 
         String defaultRole = "admin";
 
@@ -71,39 +85,20 @@ public class SignUpController {
         try (Connection conn = JDBC.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
 
+            pstmt.setString(1, username);
+            pstmt.setString(2, fullName);
+            pstmt.setString(3, password);
+            pstmt.setString(4, defaultRole);
 
-            pstmt.setString(1, username);   // Maps to username
-            pstmt.setString(2, fullName);   // Maps to fullName
-            pstmt.setString(3, password);   // Maps to password
-            pstmt.setString(4, defaultRole); // Maps to role
-
-            int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
-
-        } catch (SQLException e) {
-            System.err.println("Database Error during sign-up attempt:");
-            System.err.println("SQL State: " + e.getSQLState());
-            System.err.println("Error Code: " + e.getErrorCode());
-
-            if (e.getErrorCode() == 1062) {
-                System.err.println("Error Message: Duplication error. The chosen username may already exist.");
-            } else {
-                System.err.println("Detailed SQL Message: " + e.getMessage());
-            }
-            e.printStackTrace();
-
-            return false;
+            pstmt.executeUpdate();
         }
     }
 
-    /**
-     * Switches the current scene to the Login page (controller.fxml).
-     */
     @FXML
     public void switchToLoginScene(ActionEvent event) throws IOException {
         System.out.println("Switching to Login screen...");
 
-        Parent root = FXMLLoader.load(getClass().getResource("controller.fxml"));
+        Parent root = FXMLLoader.load(getClass().getResource("/controller/controller.fxml"));
         Stage stage = (Stage)((Node)event.getSource()).getScene().getWindow();
         Scene scene = new Scene(root);
         stage.setScene(scene);
