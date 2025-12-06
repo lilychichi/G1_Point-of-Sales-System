@@ -55,23 +55,19 @@ public class SalesReportController implements Initializable {
         salesData.clear();
         double grandTotal = 0.0;
 
-        // SQL Query
+        // DIRECT FK QUERY matching your LoggedInController logic
         String sql = "SELECT " +
                 "    P.product_name AS productName, " +
                 "    SUM(OD.quantity) AS TotalQuantitySold, " +
                 "    SUM(OD.subtotal) AS TotalSubtotal " +
                 "FROM " +
-                "    Product P " +
+                "    orderDetails OD " +
                 "JOIN " +
-                "    product_has_orderdetails POD ON P.idProduct = POD.Product_idProduct " +
+                "    product P ON OD.product_idProduct = P.idProduct " +
                 "JOIN " +
-                "    orderdetails OD ON POD.OrderDetails_idOrderDetails = OD.idOrderDetails " +
-                "JOIN " +
-                "    order_has_orderdetails OHD ON OD.idOrderDetails = OHD.OrderDetails_idOrderDetails " +
-                "JOIN " +
-                "    `order` O ON OHD.Order_idOrder = O.idOrder " +
+                "    `order` O ON OD.order_idOrder = O.idOrder " +
                 "WHERE " +
-                "    O.orderDate = ? " +  // Directly matches the string saved in LoggedInController
+                "    O.orderDate = ? " +
                 "GROUP BY " +
                 "    P.product_name " +
                 "ORDER BY " +
@@ -80,7 +76,6 @@ public class SalesReportController implements Initializable {
         try (Connection conn = JDBC.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Format matches the simple string saved in Order table: "MM/dd/yyyy"
             String dateString = selectedDate.format(REPORT_DATE_FORMATTER);
             pstmt.setString(1, dateString);
 

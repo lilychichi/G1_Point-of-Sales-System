@@ -80,11 +80,10 @@ public class LoggedInController implements Initializable {
     private long lastKeyTime = 0;
     private static final long BARCODE_TIMEOUT = 50;
 
-    Scene fxmlFile;
-    Parent root;
-    Stage window;
-
     private static final String IMAGE_STORAGE_DIR = "product_images";
+
+    // Hardcoded User ID (Admin) - In a real app, pass this from Login
+    private int currentUserId = 1;
 
     public static class ProductDisplay {
         private final int id;
@@ -133,7 +132,7 @@ public class LoggedInController implements Initializable {
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             orderItems.remove(item);
-            showAlert(Alert.AlertType.INFORMATION, "Item Removed", item.getName() + " has been removed from the order.");
+            showAlert(Alert.AlertType.INFORMATION, "Item Removed", item.getName() + " has been removed.");
         }
     }
 
@@ -163,58 +162,50 @@ public class LoggedInController implements Initializable {
     }
 
     private Stage openModalWindow (String resource, String title) throws IOException{
-        root = FXMLLoader.load(getClass().getResource("/controller/" + resource));
-        fxmlFile = new Scene(root);
-        window = new Stage();
-        window.setScene(fxmlFile);
-        window.initModality(Modality.APPLICATION_MODAL);
-        window.setAlwaysOnTop(true);
-        window.setIconified(false);
-        window.initStyle(StageStyle.DECORATED);
-        window.setTitle(title);
-        window.showAndWait();
-        return window;
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/controller/" + resource));
+        Parent root = loader.load();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setAlwaysOnTop(true);
+        stage.setIconified(false);
+        stage.initStyle(StageStyle.DECORATED);
+        stage.setTitle(title);
+        stage.showAndWait();
+        return stage;
     }
+
+    // --- PERSISTENCE METHODS FOR DIRECT FOREIGN KEYS ---
 
     private boolean saveFullOrderTransaction(int orderId, List<OrderItem> items) {
         try (Connection conn = JDBC.getConnection()) {
             conn.setAutoCommit(false);
 
-            String insertOD = "INSERT INTO orderdetails (quantity, price, subtotal, discount, vat, tax, warranty) VALUES (?, ?, ?, 0.0, 0.0, 0.0, 0.0)";
-            String insertPOD = "INSERT INTO product_has_orderdetails (Product_idProduct, OrderDetails_idOrderDetails) VALUES (?, ?)";
-            String insertOHD = "INSERT INTO order_has_orderdetails (Order_idOrder, OrderDetails_idOrderDetails) VALUES (?, ?)";
+            // Matches your Schema: Inserting into orderdetails with Foreign Keys directly.
+            // We use a SUBQUERY to get the category_idCategory from the product table based on the product ID.
+            String insertOD = "INSERT INTO orderdetails " +
+                    "(quantity, price, subtotal, discount, vat, tax, warranty, order_idOrder, order_user_idUser, product_idProduct, product_category_idCategory) " +
+                    "VALUES (?, ?, ?, 0.0, 0.0, 0.0, NULL, ?, ?, ?, (SELECT category_idCategory FROM product WHERE idProduct = ?))";
 
-            try (PreparedStatement psOD = conn.prepareStatement(insertOD, PreparedStatement.RETURN_GENERATED_KEYS);
-                 PreparedStatement psPOD = conn.prepareStatement(insertPOD);
-                 PreparedStatement psOHD = conn.prepareStatement(insertOHD)) {
-
+            try (PreparedStatement psOD = conn.prepareStatement(insertOD)) {
                 for (OrderItem item : items) {
                     psOD.setInt(1, item.getQuantity());
                     psOD.setDouble(2, item.getPrice());
                     psOD.setDouble(3, item.getTotal());
-                    psOD.executeUpdate();
+                    psOD.setInt(4, orderId); // order_idOrder
+                    psOD.setInt(5, currentUserId); // order_user_idUser
+                    psOD.setInt(6, Integer.parseInt(item.getProductId())); // product_idProduct
+                    psOD.setInt(7, Integer.parseInt(item.getProductId())); // product_idProduct (Used in subquery)
 
-                    try (ResultSet generatedKeys = psOD.getGeneratedKeys()) {
-                        if (generatedKeys.next()) {
-                            int orderDetailsId = generatedKeys.getInt(1);
-
-                            psPOD.setInt(1, Integer.parseInt(item.getProductId()));
-                            psPOD.setInt(2, orderDetailsId);
-                            psPOD.addBatch();
-
-                            psOHD.setInt(1, orderId);
-                            psOHD.setInt(2, orderDetailsId);
-                            psOHD.addBatch();
-                        }
-                    }
+                    psOD.addBatch();
                 }
-                psPOD.executeBatch();
-                psOHD.executeBatch();
+                psOD.executeBatch();
                 conn.commit();
                 return true;
             } catch (SQLException e) {
                 conn.rollback();
-                System.err.println("Transaction failed: " + e.getMessage());
+                System.err.println("Transaction failed (Order Details): " + e.getMessage());
                 return false;
             } finally {
                 conn.setAutoCommit(true);
@@ -243,50 +234,36 @@ public class LoggedInController implements Initializable {
     }
 
     private boolean savePaymentLog(int orderId, double amountPaid, double change) {
-        String insertPayment = "INSERT INTO payment (payment_type, payment_Date, amountPaid, `change`) VALUES (?, ?, ?, ?)";
-        String insertLink = "INSERT INTO payment_has_order (Payment_idPayment, Order_idOrder) VALUES (?, ?)";
+        // Matches your Schema: Payment table has order_idOrder and order_user_idUser
+        String insertPayment = "INSERT INTO payment (payment_type, payment_Date, amountPaid, `change`, order_idOrder, order_user_idUser) VALUES (?, ?, ?, ?, ?, ?)";
         String updateOrderTotal = "UPDATE `order` SET totalAmount = ? WHERE idOrder = ?";
 
         try (Connection conn = JDBC.getConnection()) {
             conn.setAutoCommit(false);
 
-            // Format: MM/dd/yyyy HH:mm:ss
             String dateTimeNow = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss"));
 
-            int paymentId = -1;
-            try (PreparedStatement psPay = conn.prepareStatement(insertPayment, PreparedStatement.RETURN_GENERATED_KEYS)) {
+            try (PreparedStatement psPay = conn.prepareStatement(insertPayment)) {
                 psPay.setString(1, "Cash");
                 psPay.setString(2, dateTimeNow);
                 psPay.setDouble(3, amountPaid);
                 psPay.setDouble(4, change);
+                psPay.setInt(5, orderId); // order_idOrder
+                psPay.setInt(6, currentUserId); // order_user_idUser
                 psPay.executeUpdate();
-
-                try (ResultSet rs = psPay.getGeneratedKeys()) {
-                    if (rs.next()) paymentId = rs.getInt(1);
-                }
             }
 
-            if (paymentId != -1) {
-                try (PreparedStatement psLink = conn.prepareStatement(insertLink)) {
-                    psLink.setInt(1, paymentId);
-                    psLink.setInt(2, orderId);
-                    psLink.executeUpdate();
-                }
-
-                try (PreparedStatement psOrder = conn.prepareStatement(updateOrderTotal)) {
-                    double total = amountPaid - change;
-                    psOrder.setDouble(1, total);
-                    psOrder.setInt(2, orderId);
-                    psOrder.executeUpdate();
-                }
-
-                conn.commit();
-                return true;
-            } else {
-                conn.rollback();
-                return false;
+            try (PreparedStatement psOrder = conn.prepareStatement(updateOrderTotal)) {
+                double total = amountPaid - change;
+                psOrder.setDouble(1, total);
+                psOrder.setInt(2, orderId);
+                psOrder.executeUpdate();
             }
+
+            conn.commit();
+            return true;
         } catch (SQLException e) {
+            System.err.println("Payment log failed: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -335,10 +312,16 @@ public class LoggedInController implements Initializable {
         String dateString = today.format(DateTimeFormatter.ofPattern("MM/dd/yyyy"));
         currentOrderDate = dateString;
 
+        // Matches your Schema: Order table has user_idUser
+        String query = "INSERT INTO `Order` (OrderDate, totalAmount, user_idUser) VALUES (?, ?, ?)";
+
         try (Connection conn = JDBC.getConnection();
-             PreparedStatement ps = conn.prepareStatement("INSERT INTO `Order` (OrderDate, totalAmount) VALUES (?, ?)", PreparedStatement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement ps = conn.prepareStatement(query, PreparedStatement.RETURN_GENERATED_KEYS)) {
+
             ps.setString(1, dateString);
             ps.setDouble(2, 0.00);
+            ps.setInt(3, currentUserId); // user_idUser
+
             ps.executeUpdate();
             try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
                 if (generatedKeys.next()) currentOrderId = generatedKeys.getInt(1);
@@ -348,12 +331,17 @@ public class LoggedInController implements Initializable {
             System.out.println("New Order ID: " + currentOrderId);
         } catch (SQLException ex) {
             showAlert(Alert.AlertType.ERROR, "Database Error", "Failed to create order: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 
     private ProductDisplay getProductByBarcode(String barcode) {
+        // Updated Query: Joins with category to match your new schema
+        String query = "SELECT p.idProduct, p.product_name, p.price, p.image_path, p.barcode " +
+                "FROM product p JOIN category c ON p.category_idCategory = c.idCategory " +
+                "WHERE p.barcode = ?";
         try (Connection conn = JDBC.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT idProduct, product_name, price, image_path, barcode FROM Product WHERE barcode = ?")) {
+             PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, barcode);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return new ProductDisplay(rs.getInt("idProduct"), rs.getString("product_name"), rs.getDouble("price"), rs.getString("image_path"), rs.getString("barcode"));
@@ -379,7 +367,10 @@ public class LoggedInController implements Initializable {
 
     private List<ProductDisplay> getProductsByCategory(String categoryName) {
         List<ProductDisplay> products = new ArrayList<>();
-        String query = "SELECT p.idProduct, p.product_name, p.price, p.image_path, p.barcode FROM product p JOIN product_has_category phc ON p.idProduct = phc.Product_idProduct JOIN category c ON phc.Category_idCategory = c.idCategory WHERE c.category_name = ?";
+        // Updated Query: Joins using category_idCategory
+        String query = "SELECT p.idProduct, p.product_name, p.price, p.image_path, p.barcode " +
+                "FROM product p JOIN category c ON p.category_idCategory = c.idCategory " +
+                "WHERE c.category_name = ?";
         try (Connection conn = JDBC.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, categoryName);
@@ -527,7 +518,7 @@ public class LoggedInController implements Initializable {
                     updateOrderLabels();
                     setCategoryButtonsDisabled(true);
                 } else {
-                    showAlert(Alert.AlertType.ERROR, "Critical Error", "Failed to save transaction data.");
+                    showAlert(Alert.AlertType.ERROR, "Critical Error", "Failed to save transaction data. Check Console.");
                 }
             }
         } catch (IOException e) { e.printStackTrace(); }
@@ -548,7 +539,8 @@ public class LoggedInController implements Initializable {
 
     private boolean deleteOrderFromDatabase(int orderId) {
         try (Connection conn = JDBC.getConnection()) {
-            conn.createStatement().executeUpdate("DELETE FROM payment_has_order WHERE Order_idOrder=" + orderId);
+            conn.createStatement().executeUpdate("DELETE FROM payment WHERE order_idOrder=" + orderId);
+            conn.createStatement().executeUpdate("DELETE FROM orderdetails WHERE order_idOrder=" + orderId);
             conn.createStatement().executeUpdate("DELETE FROM `order` WHERE idOrder=" + orderId);
             return true;
         } catch (SQLException e) { return false; }
